@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Wilno – Przewodnik dla Gości z Polski</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root {
     --bg: #faf7f2;
@@ -44,28 +43,11 @@
   }
   .flag { display: inline-block; margin-right: 6px; }
   main {
-    max-width: 1280px;
+    max-width: 820px;
     margin: 0 auto;
     padding: 24px;
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 24px;
   }
-  @media (max-width: 900px) {
-    main { grid-template-columns: 1fr; }
-  }
-  #map {
-    height: 680px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-    position: sticky;
-    top: 16px;
-  }
-  @media (max-width: 900px) {
-    #map { height: 420px; position: static; }
-  }
-  .list h2 {
+  h2 {
     margin: 0 0 12px;
     font-size: 1.3rem;
   }
@@ -110,15 +92,14 @@
     margin-bottom: 12px;
     transition: all 0.2s;
     cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
   }
   .card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-    border-color: var(--accent-2);
-  }
-  .card.active {
     border-color: var(--accent);
-    box-shadow: 0 8px 20px rgba(184,49,47,0.12);
   }
   .card-head {
     display: flex;
@@ -157,12 +138,7 @@
   .desc {
     font-size: 0.92rem;
     color: #333;
-    margin: 8px 0;
-  }
-  .addr {
-    font-size: 0.82rem;
-    color: var(--muted);
-    margin-bottom: 6px;
+    margin: 8px 0 10px;
   }
   .pl-note {
     font-size: 0.82rem;
@@ -177,7 +153,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 12px;
   }
   .btn {
     display: inline-flex;
@@ -215,9 +191,11 @@
     background: #1d4ed8;
     border-color: #1d4ed8;
   }
-  .leaflet-popup-content { margin: 12px 14px; font-size: 0.9rem; }
-  .leaflet-popup-content strong { font-size: 1rem; }
-  .leaflet-popup-content a { color: var(--accent); text-decoration: none; }
+  .map-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
   footer {
     text-align: center;
     padding: 24px;
@@ -226,318 +204,237 @@
     border-top: 1px solid var(--border);
     margin-top: 24px;
   }
-  .legend {
-    background: #fff;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    line-height: 1.8;
-  }
-  .legend-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
-  }
 </style>
 </head>
 <body>
 
 <header>
   <h1><span class="flag">🇵🇱</span> Witamy w Wilnie!</h1>
-  <p>Restauracje, bary i miejsca warte zobaczenia w centrum miasta — z polskimi akcentami i najlepszymi opiniami w Google</p>
+  <p>Restauracje, bary i miejsca warte zobaczenia w centrum miasta — kliknij dowolne miejsce, aby otworzyć w Google Maps</p>
 </header>
 
 <main>
-  <section class="list">
-    <h2>Polecane miejsca</h2>
-    <div class="filter-bar" id="filters">
-      <button class="chip active" data-cat="all">Wszystko</button>
-      <button class="chip" data-cat="restaurant">Restauracje</button>
-      <button class="chip" data-cat="premium">Premium</button>
-      <button class="chip" data-cat="bar">Bary</button>
-      <button class="chip" data-cat="sight">Atrakcje</button>
-      <button class="chip" data-cat="tablein">Rezerwacja Tablein</button>
-    </div>
-    <div id="cards"></div>
-  </section>
-
-  <div id="map"></div>
+  <h2>Polecane miejsca</h2>
+  <div class="filter-bar" id="filters">
+    <button class="chip active" data-cat="all">Wszystko</button>
+    <button class="chip" data-cat="restaurant">Restauracje</button>
+    <button class="chip" data-cat="premium">Premium</button>
+    <button class="chip" data-cat="bar">Bary</button>
+    <button class="chip" data-cat="sight">Atrakcje</button>
+    <button class="chip" data-cat="tablein">Rezerwacja Tablein</button>
+  </div>
+  <div id="cards"></div>
 </main>
 
 <footer>
   Demo · Centrum Wilna · Ceny i godziny otwarcia mogą się zmieniać · Polecamy rezerwację z wyprzedzeniem
 </footer>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+function mapsQuery(name) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(name + ' Vilnius');
+}
+
 const places = [
   // ============ RESTAURACJE - STANDARD ============
   {
     id: 'ryziu', name: 'Ryžių Jūra', cat: 'restaurant', tag: 'Azjatycka', price: '€€', rating: 4.6,
     desc: 'Restauracja azjatycka z wyjątkowo przyjemną atmosferą. Fusion japońsko-koreańsko-tajsko-nepalski, ramen, dim sum, sushi. Lubiana przez lokalnych smakoszy.',
-    addr: 'Šv. Ignoto g. 14, Wilno', coords: [54.68148, 25.28482],
-    website: null, maps: 'https://maps.app.goo.gl/AUqqq1c6zZWb84Pa6', tablein: 'https://ryziu-jura.tablein.com/'
+    website: null, tablein: 'https://ryziu-jura.tablein.com/'
   },
   {
     id: 'brond', name: 'Brond', cat: 'restaurant', tag: 'Steki', price: '€€€', rating: 4.7,
     desc: 'Koncept jednego dania — stek i frytki bez limitu. Duże porcje, dobre mięso, sprawna obsługa. Idealne na mięsny wieczór.',
-    addr: 'Didžioji g. 18, Wilno', coords: [54.67944, 25.28833],
-    website: 'https://brond.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Brond+Vilnius', tablein: null
+    website: 'https://brond.lt/', tablein: null
   },
   {
     id: 'amigo', name: 'Amigo', cat: 'restaurant', tag: 'Meksykańska', price: '€€', rating: 4.5,
     desc: 'Meksykańska restauracja w miejscu dawnej Distilerii. Tacos, quesadille, świeże guacamole i mocne margarity. Żywa, kolorowa atmosfera.',
-    addr: 'Vilniaus g. 28, Wilno', coords: [54.68266, 25.28029],
-    website: 'https://amigo.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Amigo+restaurant+Vilnius', tablein: null
+    website: 'https://amigo.lt/', tablein: null
   },
   {
     id: 'firenze', name: 'Firenze', cat: 'restaurant', tag: 'Włoska', price: '€€', rating: 4.6,
     desc: 'Przytulna włoska restauracja z uroczym tarasem od strony Užupis. Świeża pasta, pizza z pieca, dobre wina i tiramisu.',
-    addr: 'Paupio g. 16, Wilno', coords: [54.67896, 25.29905],
-    website: 'https://firenze.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Firenze+restaurant+Vilnius', tablein: null
+    website: 'https://firenze.lt/', tablein: null
   },
   {
     id: 'tempo', name: 'Tempo', cat: 'restaurant', tag: 'Sharing / śródziemnomorska', price: '€€', rating: 4.7,
     desc: 'Sharing-style — śródziemnomorskie dania do dzielenia, naturalne wina, muzyka z winylu. Świetne miejsce dla większej grupy.',
-    addr: 'Vokiečių g. 39, Wilno', coords: [54.67981, 25.28319],
-    website: 'https://tempov39.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Tempo+Vokieciu+Vilnius', tablein: null
+    website: 'https://tempov39.lt/', tablein: null
   },
   {
     id: 'plusone', name: 'Plus One', cat: 'restaurant', tag: 'Europejska / wina', price: '€€€', rating: 4.8,
     desc: 'Nowoczesna kuchnia europejska comfort food + naturalne wina. Eleganckie wnętrze, kreatywna karta, świetne koktajle.',
-    addr: 'Šv. Mykolo g. 4, Wilno', coords: [54.68320, 25.29009],
-    website: 'https://plusone.lt/restaurant/', maps: 'https://www.google.com/maps/search/?api=1&query=Plus+One+restaurant+Vilnius', tablein: null
+    website: 'https://plusone.lt/restaurant/', tablein: null
   },
   {
     id: 'lokys', name: 'Lokys', cat: 'restaurant', tag: 'Litewska tradycyjna', price: '€€€', rating: 4.5,
     desc: 'Restauracja działa od 1972 r. w XV-wiecznej piwnicy. Tradycyjna kuchnia litewska z dziczyzną — bóbr, dzik, jeleń. Klimat średniowiecza.',
-    addr: 'Stiklių g. 8, Wilno', coords: [54.67994, 25.28647],
-    website: 'https://lokys.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Lokys+restaurant+Vilnius', tablein: null,
+    website: 'https://lokys.lt/', tablein: null,
     plNote: 'Bardzo lubiana przez polskich turystów — staropolski klimat, menu po polsku.'
   },
   {
     id: 'senoji', name: 'Senoji Trobelė', cat: 'restaurant', tag: 'Litewska', price: '€€', rating: 4.6,
     desc: 'Tradycyjna litewska kuchnia w klimatycznym, wiejskim wnętrzu. Cepeliny, kibinai, chłodnik litewski. Porcje obfite, ceny rozsądne.',
-    addr: 'Naugarduko g. 36, Wilno', coords: [54.67449, 25.26956],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Senoji+Trobele+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Klasyka — cepeliny i chłodnik tak jak u polskiej babci na Wileńszczyźnie.'
   },
   {
     id: 'etno', name: 'Etno Dvaras', cat: 'restaurant', tag: 'Litewska tradycyjna', price: '€€', rating: 4.4,
     desc: 'Sieciowa, ale solidna tradycyjna litewska kuchnia. Cepeliny, blyny, šaltibarščiai (chłodnik), kibinai. Menu również po polsku.',
-    addr: 'Aušros Vartų g. 2, Wilno', coords: [54.67655, 25.28816],
-    website: 'https://etnodvaras.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Etno+Dvaras+Ausros+Vartu+Vilnius', tablein: null,
+    website: 'https://etnodvaras.lt/', tablein: null,
     plNote: 'Pewny wybór — duże porcje, menu i obsługa po polsku. Tuż przy Ostrej Bramie.'
   },
   {
     id: 'belmontas', name: 'Belmontas', cat: 'restaurant', tag: 'Litewska / impreza', price: '€€€', rating: 4.4,
     desc: 'Kompleks restauracyjny przy wodospadzie w lesie. Litewska kuchnia, hotel, SPA, amfiteatr. Klimat dworskiej posiadłości, dobre na wesela i większe spotkania.',
-    addr: 'Belmonto g. 17, Wilno', coords: [54.68424, 25.35646],
-    website: 'https://belmontas.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Belmontas+Vilnius', tablein: null
+    website: 'https://belmontas.lt/', tablein: null
   },
   // ============ RESTAURACJE - PREMIUM ============
   {
     id: 'meating', name: 'Meating Room', cat: 'premium', tag: 'Stekownia południowoamerykańska', price: '€€€€', rating: 4.7,
     desc: 'Premium stekownia w stylu południowoamerykańskim. Dojrzewająca wołowina, autorskie sosy, eleganckie wnętrze. Karta win na wysokim poziomie.',
-    addr: 'Vilniaus g. 18, Wilno', coords: [54.68554, 25.27964],
-    website: 'https://meatingroom.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Meating+Room+Vilnius', tablein: 'https://meatingroom.tablein.com/'
+    website: 'https://meatingroom.lt/', tablein: 'https://meatingroom.tablein.com/'
   },
   {
     id: 'proteviai', name: 'Protėviai', cat: 'premium', tag: 'Steki nad ogniem ★ Michelin Guide', price: '€€€€', rating: 4.7,
     desc: 'Restauracja w Michelin Guide (2024 i 2025). Kuchnia oparta na ogniu — steki, ryby i warzywa pieczone na drewnie. Surowe materiały najwyższej jakości.',
-    addr: 'Odminių g. 3, Wilno', coords: [54.68547, 25.28460],
-    website: 'http://www.proteviai.com/', maps: 'https://www.google.com/maps/search/?api=1&query=Proteviai+Vilnius', tablein: null
+    website: 'http://www.proteviai.com/', tablein: null
   },
   {
     id: 'meatlovers', name: 'Meat Lovers', cat: 'premium', tag: 'Mięso premium', price: '€€€', rating: 4.6,
     desc: 'Dla prawdziwych miłośników mięsa — steki, żeberka, burgery z najwyższej półki. Profesjonalna obsługa, ciemne klimatyczne wnętrze.',
-    addr: 'Liejyklos g. 8, Wilno', coords: [54.68363, 25.28309],
-    website: 'https://meat-lovers-vilnius.tablein.com/lt', maps: 'https://www.google.com/maps/search/?api=1&query=Meat+Lovers+Vilnius', tablein: 'https://meat-lovers-vilnius.tablein.com/lt'
+    website: 'https://meat-lovers-vilnius.tablein.com/lt', tablein: 'https://meat-lovers-vilnius.tablein.com/lt'
   },
   {
     id: 'nineteen18', name: 'Nineteen18', cat: 'premium', tag: 'Fine dining ★ Michelin', price: '€€€€', rating: 4.8,
     desc: 'Restauracja z gwiazdką Michelin (2024 i 2025). Mieści się w Pałacu Vain. Nowoczesna interpretacja smaków regionalnych, menu degustacyjne. Od początku 2026 r. szefem kuchni jest Vita Bartininkaitė.',
-    addr: 'Dominikonų g. 11, Wilno', coords: [54.68124, 25.28557],
-    website: 'https://nineteen18.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Nineteen18+Vilnius', tablein: null
+    website: 'https://nineteen18.lt/', tablein: null
   },
   {
     id: 'dziaugsmas', name: 'Džiaugsmas', cat: 'premium', tag: 'Fine dining ★ Michelin', price: '€€€€', rating: 4.7,
     desc: 'Restauracja z gwiazdką Michelin (2024 i 2025). Szef kuchni Martynas Praškevičius. Kreatywna kuchnia litewska na sezonowych produktach. Elegancko, ale bez sztywności.',
-    addr: 'Vilniaus g. 28, Wilno', coords: [54.68266, 25.28029],
-    website: 'https://dziaugsmas.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Dziaugsmas+Vilnius', tablein: null
+    website: 'https://dziaugsmas.lt/', tablein: null
   },
   {
     id: 'ertlio', name: 'Ertlio Namas', cat: 'premium', tag: 'Litewska historyczna', price: '€€€', rating: 4.7,
     desc: 'Restauracja serwująca dania z XVI-XVIII wieku według archiwalnych przepisów Wielkiego Księstwa Litewskiego. Unikalne doświadczenie kulinarne.',
-    addr: 'Šv. Jono g. 7, Wilno', coords: [54.68199, 25.28755],
-    website: 'https://ertlionamas.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Ertlio+Namas+Vilnius', tablein: null,
+    website: 'https://ertlionamas.lt/', tablein: null,
     plNote: 'Wiele dań nawiązuje do kuchni Rzeczypospolitej Obojga Narodów.'
   },
   // ============ BARY ============
   {
     id: 'alaus-deze', name: 'Alaus Dėžė (Bernardinų Kiemelis)', cat: 'bar', tag: 'Polecane! · Letni ogródek', price: '€€', rating: 4.7,
     desc: 'NASZA SPECJALNA REKOMENDACJA — kultowy letni ogródek piwny w Bernardinų Kiemelis (dziedzińcu Bernardyńskim). Wybór kraftowych piw lokalnych, klimat dużego ogrodu pod drzewami, długie stoły, świetne towarzystwo. Często grają DJ-e, weekendowe imprezy. Jedno z najfajniejszych miejsc Wilna w sezonie letnim.',
-    addr: 'Bernardinų g. 7, Wilno', coords: [54.68347, 25.29141],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Alaus+Deze+Bernardinu+Kiemelis+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Must-see latem! Idealne miejsce na wieczorne piwo po dniu zwiedzania — Starówka i Užupis w zasięgu spaceru.'
   },
   {
     id: 'salionas', name: 'Salionas', cat: 'bar', tag: 'Koktajle / speakeasy', price: '€€€', rating: 4.8,
     desc: 'Ukryty speakeasy w budynku Związku Pisarzy. Klimat salonu — fotele, świece, ciche rozmowy. Autorskie koktajle, marynowane warzywa do drinków, profesjonalni barmani. Jedno z najlepiej ocenianych miejsc w Wilnie.',
-    addr: 'K. Sirvydo g. 6, Wilno', coords: [54.68749, 25.28311],
-    website: 'https://salionas.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Salionas+Vilnius', tablein: null
+    website: 'https://salionas.lt/', tablein: null
   },
   {
     id: 'alchemikas', name: 'Alchemikas', cat: 'bar', tag: 'Koktajl-bar', price: '€€€', rating: 4.7,
     desc: 'Kreatywna mixologia w sercu Starówki. Eksperymentalne koktajle, własne nalewki i syropy, klimat alchemicznej pracowni. Polecane przez lokalnych smakoszy.',
-    addr: 'Islandijos g. 1, Wilno', coords: [54.68401, 25.27886],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Alchemikas+bar+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
     id: 'nicknora', name: 'Nick & Nora Cocktail Bar', cat: 'bar', tag: 'Klasyczne koktajle', price: '€€€', rating: 4.8,
     desc: 'Elegancki koktajl-bar w stylu lat 30-tych. Klasyczne drinki w mistrzowskim wykonaniu, eleganckie wnętrze, świetna obsługa. Świetne miejsce na koniec wieczoru.',
-    addr: 'Vilniaus g. 25, Wilno', coords: [54.68516, 25.27925],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Nick+Nora+Cocktail+Bar+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
     id: 'trinity', name: 'Trinity Cocktail House', cat: 'bar', tag: 'Koktajl-bar', price: '€€€', rating: 4.7,
     desc: 'Dwupoziomowy koktajl-bar na Vilniaus g. Nowoczesne wnętrze, autorska karta koktajli, profesjonalna obsługa. Dobre miejsce dla większej grupy.',
-    addr: 'Vilniaus g. 30, Wilno', coords: [54.68210, 25.28095],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Trinity+Cocktail+House+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
     id: 'alaus', name: 'Alaus Biblioteka', cat: 'bar', tag: 'Piwo rzemieślnicze', price: '€€', rating: 4.6,
     desc: '"Biblioteka piwa" — 17 piw z kranu i około 500 butelkowanych z Litwy i Europy. Klimat pubowy, tablice z opisami piw, fachowa obsługa. Czynne od 17:00.',
-    addr: 'Trakų g. 4, Wilno', coords: [54.67998, 25.27872],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Alaus+Biblioteka+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
     id: 'snekutis', name: 'Šnekutis', cat: 'bar', tag: 'Pub tradycyjny', price: '€', rating: 4.5,
-    desc: 'Kultowy litewski pub z własnym piwem rzemieślniczym. Wiejski klimat, prosta zakąska — kindziuk, czarny chleb z czosnkiem, smalec. UWAGA: lokal na Polocko g. (Užupis) został zamknięty/przeniesiony — aktualne lokalizacje to Šv. Stepono g. 8 i Šv. Mikalojaus g. 15.',
-    addr: 'Šv. Mikalojaus g. 15, Wilno', coords: [54.67794, 25.28251],
-    website: 'https://snekutis.com/', maps: 'https://www.google.com/maps/search/?api=1&query=Snekutis+Sv+Mikalojaus+Vilnius', tablein: null,
+    desc: 'Kultowy litewski pub z własnym piwem rzemieślniczym. Wiejski klimat, prosta zakąska — kindziuk, czarny chleb z czosnkiem, smalec. Aktualne lokalizacje: Šv. Stepono g. 8 i Šv. Mikalojaus g. 15 (lokal w Užupis przeniesiony).',
+    website: 'https://snekutis.com/', tablein: null,
     plNote: 'Klimat jak w starej karczmie wileńskiej. Tanio, lokalnie, autentycznie.'
   },
   {
     id: 'spunka', name: 'Špunka', cat: 'bar', tag: 'Pub Užupis', price: '€', rating: 4.6,
     desc: 'Mały kultowy pub w Republice Zarzecza (Užupis), tuż obok pomnika Anioła. Lokalne piwa rzemieślnicze, domowa deska serów. Klimat artystyczny. Czynne 15:00–22:00 (pn. od 17:00).',
-    addr: 'Užupio g. 9-1, Wilno', coords: [54.68045, 25.29532],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Spunka+Uzupis+Vilnius', tablein: null
+    website: null, tablein: null
   },
-  // ============ ATRAKCJE / MIEJSCA WARTE ODWIEDZENIA ============
+  // ============ ATRAKCJE ============
   {
     id: 'ausros', name: 'Ostra Brama (Aušros Vartai)', cat: 'sight', tag: 'Sanktuarium', price: '0 €', rating: 4.8,
     desc: 'Najważniejsze sanktuarium maryjne dla Polaków poza granicami kraju. Obraz Matki Bożej Ostrobramskiej w kaplicy nad bramą. Msze święte po polsku codziennie.',
-    addr: 'Aušros Vartų g. 14, Wilno', coords: [54.67432, 25.28954],
-    website: 'https://ausrosvartai.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Ausros+Vartai+Vilnius', tablein: null,
+    website: 'https://ausrosvartai.lt/', tablein: null,
     plNote: 'Obowiązkowy punkt programu dla każdego Polaka. Msze po polsku — sprawdź godziny.'
   },
   {
-    id: 'rasos', name: 'Cmentarz na Rossie', cat: 'sight', tag: 'Cmentarz historyczny', price: '0 €', rating: 4.8,
+    id: 'rasos', name: 'Cmentarz na Rossie (Rasų kapinės)', cat: 'sight', tag: 'Cmentarz historyczny', price: '0 €', rating: 4.8,
     desc: 'Jeden z najstarszych i najpiękniejszych cmentarzy Europy. Spoczywa tu serce Józefa Piłsudskiego i jego matka. Liczne groby polskich powstańców, profesorów, artystów.',
-    addr: 'Rasų g. 32, Wilno', coords: [54.67062, 25.30384],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Rasos+cemetery+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Mauzoleum "Matka i Serce Syna" — Maria Piłsudska i serce Marszałka.'
   },
   {
-    id: 'katedra', name: 'Katedra Wileńska', cat: 'sight', tag: 'Katedra', price: '0 €', rating: 4.8,
+    id: 'katedra', name: 'Katedra Wileńska (Vilniaus katedra)', cat: 'sight', tag: 'Katedra', price: '0 €', rating: 4.8,
     desc: 'Bazylika archikatedralna św. Stanisława Biskupa i św. Władysława. Główna świątynia katolicka Litwy. W krypcie spoczywają królowie i wielcy książęta. Kaplica św. Kazimierza — perła baroku.',
-    addr: 'Katedros a. 1, Wilno', coords: [54.68583, 25.28778],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Vilnius+Cathedral', tablein: null,
+    website: null, tablein: null,
     plNote: 'Spoczywają tu m.in. Aleksander Jagiellończyk i Barbara Radziwiłłówna.'
   },
   {
-    id: 'uniwersytet', name: 'Uniwersytet Wileński', cat: 'sight', tag: 'Zabytek / uniwersytet', price: '5 €', rating: 4.8,
+    id: 'uniwersytet', name: 'Uniwersytet Wileński (Vilniaus universitetas)', cat: 'sight', tag: 'Zabytek / uniwersytet', price: '5 €', rating: 4.8,
     desc: 'Jeden z najstarszych uniwersytetów Europy Środkowo-Wschodniej (1579). 13 dziedzińców, kościół św. Janów, biblioteka. Tu studiowali Mickiewicz, Słowacki, Lelewel.',
-    addr: 'Universiteto g. 3, Wilno', coords: [54.68266, 25.28668],
-    website: 'https://www.vu.lt/', maps: 'https://www.google.com/maps/search/?api=1&query=Vilnius+University', tablein: null,
+    website: 'https://www.vu.lt/', tablein: null,
     plNote: 'Założony przez Stefana Batorego. Alma mater Adama Mickiewicza.'
   },
   {
-    id: 'piatnica', name: 'Cerkiew św. Paraskiewy (Piatnicka)', cat: 'sight', tag: 'Cerkiew', price: '0 €', rating: 4.6,
+    id: 'piatnica', name: 'Cerkiew św. Paraskiewy (Piatnicka cerkvė)', cat: 'sight', tag: 'Cerkiew', price: '0 €', rating: 4.6,
     desc: 'Najstarsza cerkiew prawosławna w Wilnie. Tu, według tradycji, ochrzczono Hannibala — pradziadka Aleksandra Puszkina.',
-    addr: 'Didžioji g. 2, Wilno', coords: [54.68083, 25.28917],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Piatnickaja+Cerkiew+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
-    id: 'gediminas', name: 'Wieża Giedymina', cat: 'sight', tag: 'Zamek / widok', price: '8 €', rating: 4.7,
+    id: 'gediminas', name: 'Wieża Giedymina (Gedimino bokštas)', cat: 'sight', tag: 'Zamek / widok', price: '8 €', rating: 4.7,
     desc: 'Symbol Wilna na Górze Zamkowej. Pozostałość zamku Giedymina z XIV wieku. Z wieży najlepszy widok na panoramę Starego Miasta. Można wejść pieszo lub kolejką.',
-    addr: 'Arsenalo g. 5, Wilno', coords: [54.68670, 25.29070],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Gediminas+Tower+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
     id: 'uzupis', name: 'Republika Užupis', cat: 'sight', tag: 'Dzielnica artystyczna', price: '0 €', rating: 4.7,
     desc: 'Artystyczna "republika" z własną konstytucją (wiszącą na ścianie, też po polsku). Galerie, kawiarnie, rzeźby, anioł na pomniku. Klimat jak paryska Bohème.',
-    addr: 'Užupio g. 2A, Wilno', coords: [54.68064, 25.29540],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Uzupis+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Konstytucja Užupis wisi również w wersji polskiej — warto przeczytać.'
   },
   {
-    id: 'mickiewicz', name: 'Pomnik Adama Mickiewicza', cat: 'sight', tag: 'Pomnik', price: '0 €', rating: 4.6,
+    id: 'mickiewicz', name: 'Pomnik Adama Mickiewicza w Wilnie', cat: 'sight', tag: 'Pomnik', price: '0 €', rating: 4.6,
     desc: 'Pomnik wieszcza nad rzeką Wilenką, przy kościele św. Anny. Mickiewicz studiował w Wilnie i to tu zaczął pisać "Dziady".',
-    addr: 'Maironio g., Wilno (k. kościoła św. Anny)', coords: [54.68281, 25.29332],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Mickiewicz+monument+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Obok kościół św. Anny — Napoleon chciał go "przenieść na dłoni do Paryża".'
   },
   {
-    id: 'sw-anny', name: 'Kościół św. Anny', cat: 'sight', tag: 'Kościół gotycki', price: '0 €', rating: 4.8,
+    id: 'sw-anny', name: 'Kościół św. Anny w Wilnie (Šv. Onos bažnyčia)', cat: 'sight', tag: 'Kościół gotycki', price: '0 €', rating: 4.8,
     desc: 'Perła gotyku ceglanego — fasada z 33 rodzajów cegieł. Stoi obok kościoła Bernardynów. Jeden z najczęściej fotografowanych zabytków Wilna.',
-    addr: 'Maironio g. 8, Wilno', coords: [54.68306, 25.29333],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=St+Annes+Church+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
-    id: 'piotr-pawel', name: 'Kościół św. Piotra i Pawła', cat: 'sight', tag: 'Kościół barokowy', price: '0 €', rating: 4.9,
+    id: 'piotr-pawel', name: 'Kościół św. Piotra i Pawła w Wilnie', cat: 'sight', tag: 'Kościół barokowy', price: '0 €', rating: 4.9,
     desc: 'Arcydzieło baroku — ponad 2000 stiukowych figur wewnątrz. Fundacja hetmana Michała Kazimierza Paca, który spoczywa pod progiem (na własne życzenie).',
-    addr: 'Antakalnio g. 1, Wilno', coords: [54.69412, 25.30621],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Sts+Peter+and+Paul+Church+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Napis "Hic iacet peccator" — "Tu leży grzesznik" — hetman Pac.'
   },
   {
-    id: 'pilies', name: 'Ulica Zamkowa (Pilies)', cat: 'sight', tag: 'Ulica / spacer', price: '0 €', rating: 4.7,
+    id: 'pilies', name: 'Ulica Zamkowa (Pilies gatvė)', cat: 'sight', tag: 'Ulica / spacer', price: '0 €', rating: 4.7,
     desc: 'Główna reprezentacyjna ulica Starówki. Sklepiki z bursztynem, lnem, pamiątkami. W weekendy stragany rzemieślników. Świetne miejsce na spacer i kawę na świeżym powietrzu.',
-    addr: 'Pilies g., Wilno', coords: [54.6822, 25.2890],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Pilies+street+Vilnius', tablein: null
+    website: null, tablein: null
   },
   {
     id: 'bernardinu', name: 'Ogród Bernardyński (Bernardinų sodas)', cat: 'sight', tag: 'Park / kawiarnie letnie', price: '0 €', rating: 4.8,
     desc: 'Najpiękniejszy park w centrum Wilna, tuż za kościołem św. Anny. Latem działa tu mnóstwo kawiarni, foodtrucków i kiosków — m.in. kiosk Flying Tomato Pizza (neapolitańska pizza z pieca opalanego drewnem) oraz stoiska z kawą, lodami, koktajlami. Fontanny, ogród różany, plac zabaw, leżaki na trawie.',
-    addr: 'B. Radvilaitės g. 8A, Wilno', coords: [54.68333, 25.29694],
-    website: null, maps: 'https://www.google.com/maps/search/?api=1&query=Bernardinu+sodas+Vilnius', tablein: null,
+    website: null, tablein: null,
     plNote: 'Latem to jedno z najprzyjemniejszych miejsc w mieście — kawa, pizza Flying Tomato prosto z kiosku i widok na kościół św. Anny.'
   }
 ];
-
-const map = L.map('map').setView([54.6810, 25.2870], 15);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap'
-}).addTo(map);
-
-const legend = L.control({position: 'bottomright'});
-legend.onAdd = function() {
-  const div = L.DomUtil.create('div', 'legend');
-  div.innerHTML =
-    '<span class="legend-dot" style="background:#d4a373"></span>Restauracja<br>' +
-    '<span class="legend-dot" style="background:#b8312f"></span>Premium<br>' +
-    '<span class="legend-dot" style="background:#6b4ba0"></span>Bar<br>' +
-    '<span class="legend-dot" style="background:#2f6b3c"></span>Atrakcja';
-  return div;
-};
-legend.addTo(map);
-
-const markers = {};
-const cards = {};
-
-const catColors = {
-  restaurant: '#d4a373',
-  premium: '#b8312f',
-  bar: '#6b4ba0',
-  sight: '#2f6b3c'
-};
 
 const catLabels = {
   restaurant: 'Restauracje',
@@ -545,15 +442,6 @@ const catLabels = {
   bar: 'Bary i puby',
   sight: 'Atrakcje i miejsca warte odwiedzenia'
 };
-
-function makeIcon(color) {
-  return L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="background:${color};width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28]
-  });
-}
 
 function render() {
   const container = document.getElementById('cards');
@@ -570,9 +458,12 @@ function render() {
     container.appendChild(title);
 
     items.forEach(p => {
-      const color = catColors[p.cat];
-      const card = document.createElement('div');
+      const mapsUrl = mapsQuery(p.name);
+      const card = document.createElement('a');
       card.className = 'card';
+      card.href = mapsUrl;
+      card.target = '_blank';
+      card.rel = 'noopener';
       card.dataset.id = p.id;
       card.dataset.cat = p.cat;
       card.dataset.tablein = p.tablein ? '1' : '0';
@@ -583,38 +474,15 @@ function render() {
         </div>
         <div><span class="cat ${p.cat}">${p.tag}</span><span class="price">${p.price}</span></div>
         <div class="desc">${p.desc}</div>
-        <div class="addr">📍 ${p.addr}</div>
         ${p.plNote ? `<div class="pl-note">🇵🇱 ${p.plNote}</div>` : ''}
+        <div class="map-hint">📍 Kliknij, aby otworzyć w Google Maps</div>
         <div class="actions">
-          <a class="btn btn-primary" href="${p.maps}" target="_blank" rel="noopener">Google Maps</a>
-          ${p.website ? `<a class="btn" href="${p.website}" target="_blank" rel="noopener">Strona www</a>` : ''}
-          ${p.tablein ? `<a class="btn btn-tablein" href="${p.tablein}" target="_blank" rel="noopener">Rezerwacja Tablein</a>` : ''}
+          <span class="btn btn-primary">Google Maps</span>
+          ${p.website ? `<a class="btn" href="${p.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Strona www</a>` : ''}
+          ${p.tablein ? `<a class="btn btn-tablein" href="${p.tablein}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Rezerwacja Tablein</a>` : ''}
         </div>
       `;
-      card.addEventListener('click', e => {
-        if (e.target.closest('a')) return;
-        map.flyTo(p.coords, 17, { duration: 0.8 });
-        markers[p.id].openPopup();
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-      });
       container.appendChild(card);
-      cards[p.id] = card;
-
-      const marker = L.marker(p.coords, { icon: makeIcon(color) }).addTo(map);
-      marker.bindPopup(`
-        <strong>${p.name}</strong><br>
-        <span style="color:#b8312f">★ ${p.rating}</span> · ${p.tag}<br>
-        <span style="font-size:0.85rem;color:#666">${p.addr}</span><br><br>
-        <a href="${p.maps}" target="_blank">Otwórz w Google Maps</a>
-        ${p.tablein ? `<br><a href="${p.tablein}" target="_blank">Rezerwacja Tablein</a>` : ''}
-      `);
-      marker.on('click', () => {
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-        cards[p.id].classList.add('active');
-        cards[p.id].scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-      markers[p.id] = marker;
     });
   });
 }
